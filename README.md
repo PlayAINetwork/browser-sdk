@@ -183,7 +183,7 @@ Use this function to explicitly stop the recording stream if needed:
 playAi.stopStream();
 ```
 
-### **User Logout**
+## **User Logout**
 
 When the user logs out of your game, call this function to clear the session information from PlayAI backend:
 
