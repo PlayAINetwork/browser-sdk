@@ -7,8 +7,11 @@ SDK to integrate PlayAI's gameplay streaming features into your web games.
 ## Installation
 
 `npm install @playai/sdk`
+
 `yarn add @playai/sdk`
+
 `pnpm add @playai/sdk`
+
 `bun add @playai/sdk`
 
 ## Initialization
