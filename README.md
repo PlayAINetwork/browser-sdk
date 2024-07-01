@@ -184,8 +184,7 @@ playAi.stopStream();
 
 ### **User Logout**
 
-When the user logs out of your game, call this function to clear the session information from both the browser and the
-PlayAI backend:
+When the user logs out of your game, call this function to clear the session information from PlayAI backend:
 
 ```tsx
 playAi.logout();
