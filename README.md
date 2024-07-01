@@ -117,8 +117,8 @@ executed on the game's backend servers to prevent exposure of the API key on the
 The `type` field in the request body can be one of the following: `google`, `twitter`, `evm`, or `solana`. The `account`
 field should contain the user's account details.
 
-The `account` field is a string that can be the user's Google email/id or Twitter username/id. For EVM and Solana,
-the `account` field should contain the user's wallet address.
+The `account` field is a string that represents the user's account details. For Google and Twitter, it can be the user's
+email or username respectively. For EVM and Solana, it should be the user's wallet address
 
 Here's an example of how you can obtain a session token on your server:
 
@@ -158,11 +158,36 @@ if (!currentSession) {
 
 ## Showing and Hiding the Action Bar
 
-In order to show the action bar, the game can call `playAI.showActionBar()`. This should be called when a game is
-started. User can click on record button to start recording the game.
+To display the action bar, the game can call `playAI.showActionBar()`. This should be called when a game starts.
 
-The game should call `playAI.stopRecording()` when the current game session concludes (e.g., player death).
+Depending on whether the user has a PlayAI account or not, the action bar will show a recording button or an onboarding
+button. Users can click on the onboarding button to create an account or the recording button to start recording.
 
-In order to hide the action bar, the game can call `playAI.hideActionBar()`. This should be called when a game is paused
-or stopped.
+To hide the action bar, the game can call `playAI.hideActionBar()`.
+
+## Stopping Recording and Stream
+
+When the current game session concludes (e.g., upon player death), call this function to finalize the recording:
+
+```tsx
+playAi.stopRecording();
+```
+
+During the first recording session, the user will be prompted to grant screen recording permission. This permission
+persists unless manually revoked. Otherwise, permission will be requested again for each subsequent recording session.
+
+Use this function to explicitly stop the recording stream if needed:
+
+```tsx
+playAi.stopStream();
+```
+
+### **User Logout**
+
+When the user logs out of your game, call this function to clear the session information from both the browser and the
+PlayAI backend:
+
+```tsx
+playAi.logout();
+```
 
