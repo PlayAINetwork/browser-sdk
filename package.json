@@ -1,6 +1,6 @@
 {
   "name": "@playai/sdk",
-  "version": "0.1.3",
+  "version": "0.1.5",
   "type": "module",
   "files": [
     "dist"

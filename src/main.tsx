@@ -25,6 +25,8 @@ class PlayAIError extends Error {
   }
 }
 
+type Type = "onboarding" | "recording";
+
 const API_URI = "api.playai.network";
 
 class PlayAI {
@@ -34,16 +36,30 @@ class PlayAI {
 
   private stream: MediaStream | null = null;
   private mediaRecorder: MediaRecorder | null = null;
+  private gameContainerStyles: string = "";
+  protected playAIStyles: PlayAIStyles;
 
   constructor(
     private readonly gameID: string,
     private readonly gameContainer: string,
-    protected playAIStyles: PlayAIStyles = PlayAIStyles.parse({})
+    playAIStyles: PlayAIStyles | Type,
+    private readonly demo?: Type
   ) {
     if (!this.gameID || !this.gameContainer)
       throw new PlayAIError("gameID and gameContainer are required", "INVALID_PARAMS");
 
-    this.playAIStyles = PlayAIStyles.parse(playAIStyles);
+    if (!this.demo && typeof playAIStyles === "string") {
+      this.demo = playAIStyles;
+      this.playAIStyles = PlayAIStyles.parse({});
+    } else {
+      this.playAIStyles = PlayAIStyles.parse(playAIStyles);
+    }
+
+    if (this.demo && !["onboarding", "recording"].includes(this.demo)) {
+      throw new PlayAIError("Invalid demo type. Must be either 'onboarding' or 'recording'", "INVALID_PARAMS");
+    }
+
+    if (this.demo) this.renderActionBar(this.demo);
 
     if (!window.chrome || navigator.userAgentData?.mobile) {
       throw new PlayAIError("PlayAI is only supported on chromium based desktop browsers", "UNSUPPORTED_BROWSER");
@@ -89,6 +105,48 @@ class PlayAI {
 
   private removeSessionToken = () => localStorage.removeItem("playai-session-token");
 
+  private renderActionBar(type: Type) {
+    ReactDOM.createRoot(this.createRootElement()).render(
+      <React.StrictMode>
+        <App playAIStyles={this.playAIStyles} type={type} playAI={this} />
+      </React.StrictMode>
+    );
+  }
+
+  private getGameContainer(): HTMLElement {
+    const gameContainer = document.querySelector(this.gameContainer) as HTMLElement | null;
+    if (!gameContainer) {
+      throw new PlayAIError(
+        "Game container not found. Please provide a valid game container css selector",
+        "INVALID_SELECTOR"
+      );
+    }
+    return gameContainer;
+  }
+
+  private setGameContainerStyles(): void {
+    const gameContainer = this.getGameContainer();
+    this.gameContainerStyles = gameContainer.style.cssText;
+
+    gameContainer.style.cssText = `${this.gameContainerStyles}
+  	  position: fixed !important;
+  	  top: 0 !important;
+  	  left: 0 !important;
+  	  width: 100% !important;
+  	  min-width: 100vw !important;
+  	  height: 100% !important;
+  	  min-height: 100vh !important;
+  	  z-index: 99999 !important;`;
+
+    document.body.style.overflow = "hidden";
+  }
+
+  private resetGameContainerStyles(): void {
+    const gameContainer = this.getGameContainer();
+    gameContainer.style.cssText = this.gameContainerStyles;
+    document.body.style.overflow = "";
+  }
+
   public async loginWithSessionToken(sessionToken: string) {
     const res = await this.getSession(sessionToken);
     this.setSessionToken(sessionToken);
@@ -115,17 +173,59 @@ class PlayAI {
   public async getCurrentSession() {
     const sessionToken = this.getSessionToken();
     if (!sessionToken) return null;
-    return await this.getSession(sessionToken);
+    try {
+      return await this.getSession(sessionToken);
+    } catch (e) {
+      if (e instanceof PlayAIError) {
+        return null;
+      }
+    }
   }
 
-  public async startRecording() {}
+  public async startRecording() {
+    const sessionToken = this.getSessionToken();
+    if (!sessionToken && !this.demo) throw new PlayAIError("Session token not found", "UNAUTHENTICATED");
 
-  public async stopRecording() {
+    if (!this.stream) {
+      try {
+        this.stream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: true,
+          preferCurrentTab: true
+        } as MediaStreamConstraints);
+
+        const videoTrack = this.stream.getVideoTracks()[0];
+        videoTrack.addEventListener("ended", () => this.stopStream());
+      } catch (e) {
+        throw new PlayAIError(
+          "Permission denied. Please allow screen recording permission to start recording.",
+          "PERMISSION_DENIED"
+        );
+      }
+    }
+
+    this.setGameContainerStyles();
+
+    this.mediaRecorder = new MediaRecorder(this.stream, {
+      mimeType: "video/webm;"
+    });
+
+    this.mediaRecorder.start(1000);
+
+    this.mediaRecorder.onstop = () => {
+      this.resetGameContainerStyles();
+      this.hideActionBar();
+      this.renderActionBar("recording");
+      this.mediaRecorder = null;
+    };
+  }
+
+  public stopRecording() {
     this.mediaRecorder?.stop();
   }
 
-  public async stopStream() {
-    await this.stopRecording();
+  public stopStream() {
+    this.stopRecording();
     this.stream?.getTracks().forEach((track) => track.stop());
     this.stream = null;
   }
@@ -159,11 +259,7 @@ class PlayAI {
     const type = sub ? "recording" : "onboarding";
     if (optedOut) return;
 
-    ReactDOM.createRoot(this.createRootElement()).render(
-      <React.StrictMode>
-        <App playAIStyles={this.playAIStyles} type={type} playAI={this} />
-      </React.StrictMode>
-    );
+    this.renderActionBar(type);
   }
 
   public hideActionBar() {
@@ -173,3 +269,5 @@ class PlayAI {
 }
 
 export default PlayAI;
+
+//TODO: Add listeners for resetting recording when stream is stopped

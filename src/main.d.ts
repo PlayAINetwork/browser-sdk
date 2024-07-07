@@ -53,12 +53,14 @@ declare module '@playai/sdk' {
     constructor(message: string, code: string);
   }
 
+  export type Demo = "onboarding" | "recording";
+
   export default class PlayAI {
     static readonly BE_HTTPS: string;
     static readonly BE_WS: string;
     static readonly DASH_URL: string;
 
-    constructor(gameID: string, gameContainer: string, playAIStyles?: PlayAIStyles);
+    constructor(gameID: string, gameContainer: string, playAIStyles?: PlayAIStyles | Demo, demo?: Demo);
 
     private createRootElement(): HTMLElement;
 

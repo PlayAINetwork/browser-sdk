@@ -17,6 +17,7 @@ const Wrapper = styled.div<{ $playAIStyles: PlayAIStyles }>`
   border-radius: ${(props) => props.$playAIStyles.actionBar.borderRadius};
   max-width: 54px;
   overflow: hidden;
+  z-index: 999999 !important;
 
   div,
   a,
