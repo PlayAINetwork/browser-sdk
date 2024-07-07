@@ -269,5 +269,3 @@ class PlayAI {
 }
 
 export default PlayAI;
-
-//TODO: Add listeners for resetting recording when stream is stopped

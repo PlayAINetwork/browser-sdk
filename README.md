@@ -4,6 +4,18 @@
 
 SDK to integrate PlayAI's gameplay streaming features into your web games.
 
+# Table of Contents
+
+- [Installation](#installation)
+- [Initialization](#initialization)
+- [Customizing the Action Bar](#customizing-the-action-bar)
+- [User Authentication](#user-authentication)
+- [Showing and Hiding the Action Bar](#showing-and-hiding-the-action-bar)
+- [Stopping Recording and Stream](#stopping-recording-and-stream)
+- [User Logout](#user-logout)
+- [Demo Site](https://playai.network)
+- [Integration Guide](https://playai.network/integration-guide)
+
 ## Installation
 
 `npm install @playai/sdk`
@@ -16,19 +28,67 @@ SDK to integrate PlayAI's gameplay streaming features into your web games.
 
 ## Initialization
 
+The initialization of the PlayAI SDK requires two or more parameters:
+
+1. `gameID`: This is a unique identifier assigned to your game. It is mandatory for the initialization process.
+2. `gameContainer`: This is a CSS selector that targets the HTML element where the game will be rendered. This parameter
+   is also mandatory.
+3. `playAIStyles` or `demo` (optional): This is an object that allows you to customize the appearance of the action bar
+   or a string field to render the demo version of the SDK. If the `playAIStyles` parameter is provided, it will be used
+   for customization. If not, and the `demo` parameter is provided, it will be used to render the demo version of the
+   SDK. The `demo` value can be `recording` or `onboarding`. If neither is provided, the SDK will apply a default style
+   to the action bar.
+4. `demo` (optional): This is a string field that, when provided, will render the SDK in demo mode with the specified
+   styles. The value can be `recording` or `onboarding`. This parameter is used when you want to apply custom styles and
+   also render the SDK in demo mode.
+
+Here are examples of how you can initialize the PlayAI SDK:
+
 ```javascript
 import PlayAI from '@playai/sdk';
 
 const playAI = new PlayAI('ba95fea8-c151-4168-ba19-331694c7a241', '.game-container');
 ```
 
-The initialization of the PlayAI SDK requires three parameters:
+```javascript
+const playAI = new PlayAI('ba95fea8-c151-4168-ba19-331694c7a241', '.game-container', {
+  actionBar: {
+    backgroundColor: '#f5f5f5',
+    textColor: '#000000',
+    borderRadius: '10px',
+  },
+  playAIIcon: {
+    color: '#f5f5f5',
+    hover: {
+      color: '#000000',
+    }
+  },
+});
+```
 
-1. `gameID`: This is a unique identifier assigned to your game. It is mandatory for the initialization process.
-2. `gameContainer`: This is a CSS selector that targets the HTML element where the game will be rendered. This parameter
-   is also mandatory.
-3. `playAIStyles` (optional): This is an object that allows you to customize the appearance of the action bar. If this
-   parameter is not provided, the SDK will apply a default style to the action bar.
+```javascript
+const playAI = new PlayAI('ba95fea8-c151-4168-ba19-331694c7a241', '.game-container', 'recording');
+```
+
+```javascript
+const playAI = new PlayAI('ba95fea8-c151-4168-ba19-331694c7a241', '.game-container', 'onboarding');
+```
+
+```javascript
+const playAI = new PlayAI('ba95fea8-c151-4168-ba19-331694c7a241', '.game-container', {
+  actionBar: {
+    backgroundColor: '#f5f5f5',
+    textColor: '#000000',
+    borderRadius: '10px',
+  },
+  playAIIcon: {
+    color: '#f5f5f5',
+    hover: {
+      color: '#000000',
+    }
+  },
+}, "onboarding");
+```
 
 ## Customizing the Action Bar
 
@@ -111,7 +171,7 @@ values.
 
 ## User Authentication
 
-The PlayAI SDK requires user authentication for its operation. The process of obtaining a session token for the user is
+The PlayAI SDK requires user authentication for its operation. The process of getting a session token for the user is
 facilitated through the API key and game ID provided to the game. It is imperative to note that this operation should be
 executed on the game's backend servers to prevent exposure of the API key on the client side.
 
@@ -121,7 +181,7 @@ field should contain the user's account details.
 The `account` field is a string that represents the user's account details. For Google and Twitter, it can be the user's
 email or username respectively. For EVM and Solana, it should be the user's wallet address
 
-Here's an example of how you can obtain a session token on your server:
+Here's an example of how you can get a session token on your server:
 
 ```javascript
 const res = await fetch("https://api.playai.network/sdk/your_game_id/session/create", {
@@ -159,7 +219,8 @@ if (!currentSession) {
 
 ## Showing and Hiding the Action Bar
 
-To display the action bar, the game can call `playAI.showActionBar()`. This should be called when a game starts.
+To display the action bar, the game should call `playAI.showActionBar()`. This call should be made when a game starts.
+This is important because we do not want to record the game's loading screens or menus.
 
 Depending on whether the user has a PlayAI account or not, the action bar will show a recording button or an onboarding
 button. Users can click on the onboarding button to create an account or the recording button to start recording.
@@ -175,7 +236,7 @@ playAi.stopRecording();
 ```
 
 During the first recording session, the user will be prompted to grant screen recording permission. This permission
-persists unless manually revoked. Otherwise, permission will be requested again for each subsequent recording session.
+persists unless manually revoked. Otherwise, permission will be requested again for each later recording session.
 
 Use this function to explicitly stop the recording stream if needed:
 
