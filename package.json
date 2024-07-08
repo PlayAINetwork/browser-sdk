@@ -1,6 +1,6 @@
 {
   "name": "@playai/sdk",
-  "version": "0.1.5",
+  "version": "0.1.10",
   "type": "module",
   "files": [
     "dist"
@@ -43,5 +43,9 @@
     "prettier": "^3.3.2",
     "typescript": "^5.2.2",
     "vite": "^5.3.1"
-  }
+  },
+  "keywords": [
+    "PlayAI",
+    "PlayAINetwork"
+  ]
 }

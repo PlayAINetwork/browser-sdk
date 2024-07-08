@@ -13,8 +13,6 @@ SDK to integrate PlayAI's gameplay streaming features into your web games.
 - [Showing and Hiding the Action Bar](#showing-and-hiding-the-action-bar)
 - [Stopping Recording and Stream](#stopping-recording-and-stream)
 - [User Logout](#user-logout)
-- [Demo Site](https://playai.network)
-- [Integration Guide](https://playai.network/integration-guide)
 
 ## Installation
 
@@ -224,6 +222,9 @@ This is important because we do not want to record the game's loading screens or
 
 Depending on whether the user has a PlayAI account or not, the action bar will show a recording button or an onboarding
 button. Users can click on the onboarding button to create an account or the recording button to start recording.
+
+When the user initiates recording, the game container is forced into fullscreen mode. This ensures that the game is
+recorded at the highest possible quality. If the game container selector is invalid, the SDK will throw an error.
 
 To hide the action bar, the game can call `playAI.hideActionBar()`.
 

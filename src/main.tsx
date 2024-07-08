@@ -42,7 +42,7 @@ class PlayAI {
   constructor(
     private readonly gameID: string,
     private readonly gameContainer: string,
-    playAIStyles: PlayAIStyles | Type,
+    playAIStyles?: PlayAIStyles | Type,
     private readonly demo?: Type
   ) {
     if (!this.gameID || !this.gameContainer)
@@ -52,7 +52,7 @@ class PlayAI {
       this.demo = playAIStyles;
       this.playAIStyles = PlayAIStyles.parse({});
     } else {
-      this.playAIStyles = PlayAIStyles.parse(playAIStyles);
+      this.playAIStyles = PlayAIStyles.parse(playAIStyles || {});
     }
 
     if (this.demo && !["onboarding", "recording"].includes(this.demo)) {
@@ -186,6 +186,9 @@ class PlayAI {
     const sessionToken = this.getSessionToken();
     if (!sessionToken && !this.demo) throw new PlayAIError("Session token not found", "UNAUTHENTICATED");
 
+    let id: string;
+    const buffer: Blob[] = [];
+
     if (!this.stream) {
       try {
         this.stream = await navigator.mediaDevices.getDisplayMedia({
@@ -206,18 +209,108 @@ class PlayAI {
 
     this.setGameContainerStyles();
 
+    if (this.demo) {
+      id = "demo";
+    } else {
+      const res = await fetch(`${PlayAI.BE_HTTPS}/${this.gameID}/stream/init`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionToken}`
+        }
+      });
+
+      id = ((await res.json()) as { id: string }).id;
+    }
+
+    let reconnectAttempts = 0;
+    const reconnectTimeout = 5000;
+    const maxReconnectAttempts = 5;
+    let streamingReconnectInitiated = false;
+
+    let ws = new WebSocket(`${PlayAI.BE_WS}/stream/${id}`);
+
+    const reconnect = () => {
+      if (reconnectAttempts <= maxReconnectAttempts) {
+        ws.close();
+        ws = new WebSocket(`${PlayAI.BE_WS}/stream/${id}`);
+
+        ws.onopen = () => {
+          reconnectAttempts = 0;
+          streamingReconnectInitiated = false;
+        };
+
+        ws.onerror = () => {
+          if (ws.readyState === WebSocket.CLOSED) {
+            reconnectAttempts++;
+            setTimeout(reconnect, reconnectTimeout);
+          }
+        };
+      } else {
+        //Refactor here
+        this.resetGameContainerStyles();
+        this.hideActionBar();
+        this.renderActionBar("recording");
+        throw new PlayAIError("Failed to reconnect websocket. Max attempts reached.", "CONNECTION_ERROR");
+      }
+    };
+
+    ws.onerror = () => {
+      if (ws.readyState === WebSocket.CLOSED) {
+        reconnectAttempts++;
+        reconnect();
+      }
+    };
+
     this.mediaRecorder = new MediaRecorder(this.stream, {
       mimeType: "video/webm;"
     });
 
-    this.mediaRecorder.start(1000);
+    this.mediaRecorder.ondataavailable = (e) => {
+      buffer.push(e.data);
+    };
 
     this.mediaRecorder.onstop = () => {
+      if (!buffer.length) {
+        ws.send("end");
+        ws.close();
+      }
+      //Refactor here.
       this.resetGameContainerStyles();
       this.hideActionBar();
       this.renderActionBar("recording");
       this.mediaRecorder = null;
     };
+
+    this.mediaRecorder.start(1000);
+
+    let dataStreaming = false;
+    const streamDataInterval = setInterval(async () => {
+      if (dataStreaming) return;
+      dataStreaming = true;
+
+      while (buffer.length) {
+        if (ws.readyState !== WebSocket.OPEN) {
+          if (!streamingReconnectInitiated) {
+            reconnectAttempts++;
+            streamingReconnectInitiated = true;
+            reconnect();
+          }
+          break;
+        }
+        ws.send(buffer.shift() as Blob);
+      }
+
+      if (reconnectAttempts > maxReconnectAttempts || (!buffer.length && this.mediaRecorder === null)) {
+        clearInterval(streamDataInterval);
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send("end");
+          ws.close();
+        }
+      }
+
+      dataStreaming = false;
+    }, 5000);
   }
 
   public stopRecording() {
@@ -259,7 +352,7 @@ class PlayAI {
     const type = sub ? "recording" : "onboarding";
     if (optedOut) return;
 
-    this.renderActionBar(type);
+    if (!document.getElementById("playai-action-bar")) this.renderActionBar(type);
   }
 
   public hideActionBar() {
@@ -269,3 +362,9 @@ class PlayAI {
 }
 
 export default PlayAI;
+
+//TODO: Change backend url to vite env
+//TODO: Add listeners for resetting recording when stream is stopped
+//TODO: Add Github actions for publishing to npm
+//TODO: Check typescript declaration file
+//TODO: Update README.md Heading Links
